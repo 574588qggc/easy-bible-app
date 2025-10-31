@@ -1,0 +1,29 @@
+{
+  "name": "easy-bible",
+  "version": "1.0.0",
+  "description": "A simple Bible reading website built with Nextra",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "keywords": [
+    "bible",
+    "nextra",
+    "nextjs",
+    "documentation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "next": "^16.0.1",
+    "nextra": "^4.6.0",
+    "nextra-theme-docs": "^4.6.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2"
+  }
+}
