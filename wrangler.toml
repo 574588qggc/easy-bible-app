@@ -1,0 +1,12 @@
+name = "easy-bible"
+type = "javascript"
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+
+[env.production]
+name = "easy-bible-prod"
+route = "example.com/*"
+zone_id = ""
+

@@ -11,6 +11,11 @@ export default withNextra({
     resolveAlias: {
       'next-mdx-import-source-file': './mdx-components.tsx'
     }
+  },
+  // Cloudflare Pages 配置
+  output: 'export',
+  images: {
+    unoptimized: true
   }
 })
 
