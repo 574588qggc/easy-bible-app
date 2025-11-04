@@ -1,7 +1,0 @@
-export default {
-  'the-birth-of-jesus-light-comes-to-the-world': '20. The Birth of Jesus： Light Comes to the World',
-  'the-temptation-in-the-wilderness-the-true-meaning-of-faith': '🙏 21. The Temptation in the Wilderness： The True Meaning of Faith',
-  'the-sermon-on-the-mount-the-new-law': '22. The Sermon on the Mount： The New Law',
-  'the-last-supper-night-of-destiny': '23. The Last Supper： Night of Destiny',
-  'the-cross-and-the-resurrection-love-and-salvation': '24. The Cross and the Resurrection： Love and Salvation',
-}
