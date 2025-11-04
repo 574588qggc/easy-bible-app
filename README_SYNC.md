@@ -6,11 +6,20 @@
 
 ### 🎯 核心功能
 
+- ✅ **增量同步模式**：每次运行只同步一篇新文章，实现渐进式发布 🆕
 - ✅ **动态生成 _meta.ts**：只包含实际存在的文章，避免404错误
 - ✅ **保持格式一致**：完全保持原始 meta 文件格式（单引号、trailing comma、缩进）
 - ✅ **保持目录结构**：完整复制文章目录结构
 - ✅ **智能同步**：自动检测哪些文章存在
 - ✅ **自动化运行**：支持定时、手动和文件变更触发
+
+### 🆕 增量同步特性
+
+**每次运行只同步一篇新文章**，适合：
+- 📅 定期发布内容（每天一篇）
+- 🎯 渐进式上线（控制发布节奏）
+- 🛡️ 降低风险（每次只修改一篇）
+- 📊 保持更新频率（SEO 友好）
 
 ### 📁 已创建的文件
 
@@ -23,7 +32,8 @@
 │   └── sync-articles.yml          # GitHub Actions 工作流
 ├── docs/
 │   ├── ARTICLE_SYNC_GUIDE.md      # 完整使用指南
-│   └── QUICK_START.md             # 快速开始指南
+│   ├── QUICK_START.md             # 快速开始指南
+│   └── INCREMENTAL_SYNC_GUIDE.md  # 增量同步说明 🆕
 ├── app/
 │   ├── _meta.ts                   # 应用导航配置（已更新）
 │   └── articles/                  # 同步后的文章目录
@@ -43,24 +53,41 @@
 # 1. 测试环境
 node scripts/test-sync.js
 
-# 2. 运行同步
+# 2. 运行同步（增量模式：每次只同步一篇）
 node scripts/sync-articles.js
 
 # 3. 查看结果
 ls app/articles/
 cat app/articles/_meta.ts
+
+# 4. 继续同步下一篇
+node scripts/sync-articles.js
+```
+
+**输出示例**：
+```
+🚀 Starting incremental article synchronization...
+📌 Mode: ONE ARTICLE PER RUN
+
+🆕 Syncing new article: light-and-chaos-the-seven-days-of-creation
+✅ Successfully synced: light-and-chaos-the-seven-days-of-creation
+⏭️  Skipping remaining volumes (already synced one new article)
+
+✅ Synchronization completed - ONE NEW ARTICLE SYNCED!
+🆕 New article synced: YES (1 article)
 ```
 
 ### GitHub Actions
 
 #### 自动触发
-- ⏰ **定时**：每天凌晨 2:00 (UTC) 自动运行
+- ⏰ **定时**：每天凌晨 2:00 (UTC) 自动运行 → **每天发布一篇新文章** 🆕
 - 📝 **文件变更**：推送到 `main` 分支且修改了 `articles/` 目录
 
 #### 手动触发
 1. 进入 GitHub → Actions
 2. 选择 "Sync Articles to App Directory"
 3. 点击 "Run workflow"
+4. 每次手动触发同步一篇新文章
 
 ## 📊 同步结果
 

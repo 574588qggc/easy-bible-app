@@ -100,17 +100,20 @@ function copyDirectory(source, target) {
 
 /**
  * 同步单个卷（volume）
+ * @param {string} volumeName - 卷名称
+ * @param {object} syncState - 同步状态对象 { foundNewArticle: boolean }
+ * @returns {object} - { hasVolume: boolean, syncedNewArticle: boolean }
  */
-function syncVolume(volumeName) {
+function syncVolume(volumeName, syncState) {
   console.log(`\n📚 Processing volume: ${volumeName}`);
-  
+
   const sourceVolumePath = path.join(SOURCE_DIR, volumeName);
   const targetVolumePath = path.join(TARGET_DIR, volumeName);
 
   // 检查源卷是否存在
   if (!directoryExists(sourceVolumePath)) {
     console.log(`⚠️  Source volume not found: ${sourceVolumePath}`);
-    return false;
+    return { hasVolume: false, syncedNewArticle: false };
   }
 
   // 读取源 _meta.ts
@@ -119,7 +122,7 @@ function syncVolume(volumeName) {
 
   if (!allEntries || allEntries.length === 0) {
     console.log(`⚠️  No valid entries in _meta.ts for ${volumeName}`);
-    return false;
+    return { hasVolume: false, syncedNewArticle: false };
   }
 
   // 创建目标卷目录
@@ -127,40 +130,61 @@ function syncVolume(volumeName) {
     fs.mkdirSync(targetVolumePath, { recursive: true });
   }
 
-  // 检查并复制每篇文章
+  // 检查并复制文章
   const existingEntries = [];
-  let copiedCount = 0;
+  let newArticleSynced = false;
 
   for (const entry of allEntries) {
     const articleDir = entry.key;
     const sourceArticlePath = path.join(sourceVolumePath, articleDir);
     const targetArticlePath = path.join(targetVolumePath, articleDir);
 
-    // 如果源文章目录存在，复制到目标
-    if (directoryExists(sourceArticlePath)) {
+    // 检查源文章是否存在
+    if (!directoryExists(sourceArticlePath)) {
+      console.log(`  ⊘ Skipped (source not found): ${articleDir}`);
+      continue;
+    }
+
+    // 检查目标文章是否已存在
+    const alreadyExists = directoryExists(targetArticlePath);
+
+    if (alreadyExists) {
+      // 文章已存在，添加到 meta 列表
+      console.log(`  ✓ Already exists: ${articleDir}`);
+      existingEntries.push(entry);
+    } else if (!syncState.foundNewArticle) {
+      // 这是一篇新文章，且还没有同步过新文章
+      console.log(`  🆕 Syncing new article: ${articleDir}`);
       const success = copyDirectory(sourceArticlePath, targetArticlePath);
-      
+
       if (success) {
-        console.log(`  ✓ Copied: ${articleDir}`);
+        console.log(`  ✅ Successfully synced: ${articleDir}`);
         existingEntries.push(entry);
-        copiedCount++;
+        syncState.foundNewArticle = true;
+        newArticleSynced = true;
       } else {
-        console.log(`  ✗ Failed to copy: ${articleDir}`);
+        console.log(`  ✗ Failed to sync: ${articleDir}`);
       }
     } else {
-      console.log(`  ⊘ Skipped (not found): ${articleDir}`);
+      // 已经同步了一篇新文章，跳过其他新文章
+      console.log(`  ⏭️  Skipped (will sync next time): ${articleDir}`);
     }
   }
 
-  // 生成目标 _meta.ts（只包含已复制的文章）
+  // 生成目标 _meta.ts（包含所有已存在的文章）
   if (existingEntries.length > 0) {
     const targetMetaPath = path.join(targetVolumePath, '_meta.ts');
     generateMetaFile(existingEntries, targetMetaPath);
-    console.log(`📊 Summary: ${copiedCount}/${allEntries.length} articles copied`);
-    return true;
+
+    const totalArticles = allEntries.filter(e =>
+      directoryExists(path.join(sourceVolumePath, e.key))
+    ).length;
+    console.log(`📊 Summary: ${existingEntries.length}/${totalArticles} articles in sync`);
+
+    return { hasVolume: true, syncedNewArticle: newArticleSynced };
   } else {
-    console.log(`⚠️  No articles copied for ${volumeName}`);
-    return false;
+    console.log(`⚠️  No articles in this volume`);
+    return { hasVolume: false, syncedNewArticle: false };
   }
 }
 
@@ -168,7 +192,8 @@ function syncVolume(volumeName) {
  * 主函数
  */
 function main() {
-  console.log('🚀 Starting article synchronization...\n');
+  console.log('🚀 Starting incremental article synchronization...\n');
+  console.log('📌 Mode: ONE ARTICLE PER RUN\n');
   console.log(`📂 Source: ${SOURCE_DIR}`);
   console.log(`📂 Target: ${TARGET_DIR}\n`);
 
@@ -189,34 +214,66 @@ function main() {
 
   console.log(`📋 Found ${rootEntries.length} volumes in root _meta.ts\n`);
 
+  // 同步状态：追踪是否已经同步了一篇新文章
+  const syncState = { foundNewArticle: false };
+
   // 同步每个卷
   const existingVolumes = [];
-  let successCount = 0;
+  let volumesWithContent = 0;
+  let newArticleSynced = false;
 
   for (const entry of rootEntries) {
     const volumeName = entry.key;
-    const success = syncVolume(volumeName);
+    const result = syncVolume(volumeName, syncState);
 
-    if (success) {
+    if (result.hasVolume) {
       // 检查目标卷是否存在且有内容
       const targetVolumePath = path.join(TARGET_DIR, volumeName);
       if (directoryExists(targetVolumePath)) {
         existingVolumes.push(entry);
-        successCount++;
+        volumesWithContent++;
       }
+    }
+
+    if (result.syncedNewArticle) {
+      newArticleSynced = true;
+    }
+
+    // 如果已经同步了一篇新文章，可以提前结束（优化性能）
+    if (syncState.foundNewArticle) {
+      console.log(`\n⏭️  Skipping remaining volumes (already synced one new article)`);
+
+      // 但仍需要将剩余已存在的卷添加到 meta
+      for (let i = rootEntries.indexOf(entry) + 1; i < rootEntries.length; i++) {
+        const remainingVolume = rootEntries[i];
+        const targetVolumePath = path.join(TARGET_DIR, remainingVolume.key);
+        if (directoryExists(targetVolumePath)) {
+          existingVolumes.push(remainingVolume);
+        }
+      }
+      break;
     }
   }
 
-  // 生成根 _meta.ts（只包含已成功同步的卷）
+  // 生成根 _meta.ts（只包含已有内容的卷）
   if (existingVolumes.length > 0) {
     const targetRootMetaPath = path.join(TARGET_DIR, '_meta.ts');
     generateMetaFile(existingVolumes, targetRootMetaPath);
-    
+
     console.log('\n' + '='.repeat(60));
-    console.log('✅ Synchronization completed successfully!');
+    if (newArticleSynced) {
+      console.log('✅ Synchronization completed - ONE NEW ARTICLE SYNCED!');
+    } else {
+      console.log('✅ Synchronization completed - ALL ARTICLES ALREADY SYNCED!');
+    }
     console.log('='.repeat(60));
-    console.log(`📊 Total: ${successCount}/${rootEntries.length} volumes synced`);
+    console.log(`📊 Volumes with content: ${volumesWithContent}/${rootEntries.length}`);
     console.log(`📁 Target directory: ${TARGET_DIR}`);
+    if (newArticleSynced) {
+      console.log(`🆕 New article synced: YES (1 article)`);
+    } else {
+      console.log(`🆕 New article synced: NO (all up to date)`);
+    }
     console.log('='.repeat(60) + '\n');
   } else {
     console.error('\n❌ Error: No volumes were successfully synced');
