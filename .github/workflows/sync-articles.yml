@@ -1,0 +1,134 @@
+name: Sync Articles to App Directory
+
+on:
+  # 定时触发 - 每天凌晨 2 点（UTC时间）
+  schedule:
+    - cron: '0 2 * * *'  # 每天 2:00 AM UTC (北京时间 10:00 AM)
+  
+  # 手动触发
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (preview changes without committing)'
+        required: false
+        type: boolean
+        default: false
+  
+  # 当 articles 文件夹有变更时触发
+  push:
+    branches:
+      - main
+    paths:
+      - 'articles/**'
+
+jobs:
+  sync-articles:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0  # 获取完整历史
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Run sync script
+        run: |
+          echo "🚀 Running article synchronization script..."
+          node scripts/sync-articles.js
+      
+      - name: Check for changes
+        id: check_changes
+        run: |
+          if [[ -n $(git status --porcelain app/articles) ]]; then
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "📝 Changes detected in app/articles"
+            echo ""
+            echo "Changed files:"
+            git status --short app/articles
+          else
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "✨ No changes to commit"
+          fi
+      
+      - name: Show diff (if changes exist)
+        if: steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo "📊 Detailed changes:"
+          git diff --stat app/articles
+      
+      - name: Commit and push changes
+        if: steps.check_changes.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
+        run: |
+          git add app/articles
+          
+          # 生成详细的提交信息
+          CHANGED_FILES=$(git diff --cached --name-only app/articles | wc -l)
+          
+          git commit -m "🔄 Auto-sync: Update articles from articles/ to app/articles/
+
+          📊 Summary:
+          - Changed files: ${CHANGED_FILES}
+          - Synced at: $(date -u +'%Y-%m-%d %H:%M:%S UTC')
+          - Workflow: ${{ github.workflow }}
+          - Trigger: ${{ github.event_name }}
+          - Run ID: ${{ github.run_id }}
+          
+          ✨ Only includes existing articles in _meta.ts files
+          📁 Maintains original directory structure and meta file format"
+          
+          git push origin main
+          
+          echo "✅ Changes committed and pushed successfully"
+      
+      - name: Dry run summary
+        if: github.event.inputs.dry_run == 'true' && steps.check_changes.outputs.has_changes == 'true'
+        run: |
+          echo "🔍 DRY RUN MODE - Changes preview:"
+          echo ""
+          git diff --cached --stat app/articles
+          echo ""
+          echo "⚠️  Changes were NOT committed (dry run mode)"
+      
+      - name: Generate summary
+        if: always()
+        run: |
+          echo "## 📊 Sync Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Item | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| **Workflow** | ${{ github.workflow }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Trigger** | ${{ github.event_name }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Time** | $(date -u +'%Y-%m-%d %H:%M:%S UTC') |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Has Changes** | ${{ steps.check_changes.outputs.has_changes }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| **Dry Run** | ${{ github.event.inputs.dry_run }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ "${{ steps.check_changes.outputs.has_changes }}" = "true" ]; then
+            echo "### 📝 Changed Files" >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+            git status --short app/articles >> $GITHUB_STEP_SUMMARY
+            echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "✨ No changes detected" >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Upload sync log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sync-log-${{ github.run_id }}
+          path: |
+            app/articles/**/_meta.ts
+          retention-days: 7
+
