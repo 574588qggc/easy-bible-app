@@ -6,7 +6,13 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node scripts/sync-articles.test.js",
+    "test:sync": "node scripts/test-sync.js",
+    "branch:init": "powershell -ExecutionPolicy Bypass -File scripts/setup-branches.ps1 init",
+    "branch:sync": "powershell -ExecutionPolicy Bypass -File scripts/setup-branches.ps1 sync",
+    "branch:merge": "powershell -ExecutionPolicy Bypass -File scripts/setup-branches.ps1 merge",
+    "branch:status": "powershell -ExecutionPolicy Bypass -File scripts/setup-branches.ps1 status"
   },
   "keywords": [
     "bible",

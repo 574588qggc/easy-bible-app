@@ -3,10 +3,10 @@ name: Deploy to Cloudflare Pages
 on:
   push:
     branches:
-      - main
+      - content-sync  # 监听 content-sync 分支的推送，自动部署
   pull_request:
     branches:
-      - main
+      - content-sync  # 监听针对 content-sync 的 PR
 
 jobs:
   deploy:

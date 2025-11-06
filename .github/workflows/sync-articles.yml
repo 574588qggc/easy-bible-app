@@ -4,7 +4,7 @@ on:
   # 定时触发 - 每天凌晨 2 点（UTC时间）
   schedule:
     - cron: '0 2 * * *'  # 每天 2:00 AM UTC (北京时间 10:00 AM)
-  
+
   # 手动触发
   workflow_dispatch:
     inputs:
@@ -13,22 +13,28 @@ on:
         required: false
         type: boolean
         default: false
-  
-  # 当 articles 文件夹有变更时触发
+      create_pr:
+        description: 'Create PR to main branch after sync'
+        required: false
+        type: boolean
+        default: false
+
+  # 当 articles 文件夹有变更时触发（仅在 content-sync 分支）
   push:
     branches:
-      - main
+      - content-sync
     paths:
       - 'articles/**'
 
 jobs:
   sync-articles:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          ref: content-sync  # 检出 content-sync 分支
           token: ${{ secrets.GITHUB_TOKEN }}
           fetch-depth: 0  # 获取完整历史
       
@@ -71,10 +77,10 @@ jobs:
         if: steps.check_changes.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true'
         run: |
           git add app/articles
-          
+
           # 生成详细的提交信息
           CHANGED_FILES=$(git diff --cached --name-only app/articles | wc -l)
-          
+
           git commit -m "🔄 Auto-sync: Update articles from articles/ to app/articles/
 
           📊 Summary:
@@ -83,14 +89,51 @@ jobs:
           - Workflow: ${{ github.workflow }}
           - Trigger: ${{ github.event_name }}
           - Run ID: ${{ github.run_id }}
-          
+          - Branch: content-sync
+
           ✨ Only includes existing articles in _meta.ts files
           📁 Maintains original directory structure and meta file format"
-          
-          git push origin main
-          
-          echo "✅ Changes committed and pushed successfully"
+
+          git push origin content-sync
+
+          echo "✅ Changes committed and pushed to content-sync branch successfully"
       
+      - name: Create Pull Request to main
+        if: steps.check_changes.outputs.has_changes == 'true' && github.event.inputs.dry_run != 'true' && github.event.inputs.create_pr == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: content-sync
+          base: main
+          title: '🔄 Auto-sync: New article(s) added'
+          body: |
+            ## 📖 自动同步文章
+
+            此 PR 由 GitHub Actions 自动创建，包含新同步的文章内容。
+
+            ### 📊 同步信息
+            - **同步时间**: ${{ github.event.head_commit.timestamp }}
+            - **工作流**: ${{ github.workflow }}
+            - **运行 ID**: ${{ github.run_id }}
+            - **触发方式**: ${{ github.event_name }}
+
+            ### ✅ 检查清单
+            - [ ] 文章内容正确
+            - [ ] Meta 文件格式正确
+            - [ ] 测试通过
+            - [ ] 准备合并到 main 分支
+
+            ### 📝 变更说明
+            此次同步从 `articles/` 目录同步文章到 `app/articles/` 目录。
+
+            ---
+
+            **注意**: 合并前请检查文章内容和格式是否正确。
+          labels: |
+            auto-sync
+            content
+          draft: false
+
       - name: Dry run summary
         if: github.event.inputs.dry_run == 'true' && steps.check_changes.outputs.has_changes == 'true'
         run: |

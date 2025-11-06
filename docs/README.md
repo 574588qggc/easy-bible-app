@@ -45,9 +45,43 @@ npm run build
 
 # 运行生产版本
 npm start
+
+# 运行测试
+npm test
+
+# 运行环境测试
+npm run test:sync
 ```
 
 访问 [http://localhost:3000](http://localhost:3000) 查看网站。
+
+## 🧪 测试
+
+项目包含完整的单元测试和环境测试：
+
+```bash
+# 运行所有单元测试（14个测试用例）
+npm test
+
+# 运行环境测试（验证项目结构）
+npm run test:sync
+```
+
+**测试覆盖**：
+- ✅ Meta 文件解析和生成
+- ✅ 目录操作（检查、复制、覆盖）
+- ✅ 增量同步逻辑
+- ✅ 格式规范（单引号、trailing comma）
+- ✅ 特殊字符处理（Emoji、中文）
+- ✅ 边界情况和错误处理
+- ✅ 实际项目结构验证
+
+**测试状态**: ✅ 20/20 通过 (100%)
+
+详细信息请查看：
+- [测试指南](./TESTING_GUIDE.md)
+- [测试结果报告](../TEST_RESULTS.md)
+- [快速参考](./TESTING_QUICK_REFERENCE.md)
 
 ## 📁 项目结构
 
