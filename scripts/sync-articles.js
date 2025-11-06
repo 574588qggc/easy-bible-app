@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 
 // 配置
-const SOURCE_DIR = 'articles';
+const SOURCE_DIR = 'Articles';
 const TARGET_DIR = 'app/articles';
 
 /**
