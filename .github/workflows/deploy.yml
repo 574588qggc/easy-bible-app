@@ -19,6 +19,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: content-sync  # 明确检出 content-sync 分支
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
