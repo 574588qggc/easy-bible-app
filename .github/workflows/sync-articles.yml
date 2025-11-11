@@ -1,9 +1,9 @@
 name: Sync Articles to App Directory
 
 on:
-  # 定时触发 - 每天凌晨 2 点（UTC时间）
+  # 定时触发 - 每5分钟运行一次（用于测试）
   schedule:
-    - cron: '0 2 * * *'  # 每天 2:00 AM UTC (北京时间 10:00 AM)
+    - cron: '*/5 * * * *'  # 每5分钟运行一次（GitHub Actions最短间隔）
 
   # 手动触发
   workflow_dispatch:
