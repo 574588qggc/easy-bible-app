@@ -4,4 +4,5 @@ export default {
   'volume-iii-exodus-and-the-law': '📖 Volume III： Exodus and the Law',
   'volume-iv-kingdom-and-war': '📖 Volume IV： Kingdom and War',
   'volume-v-exile-and-hope': '📖 Volume V： Exile and Hope',
+  'volume-vi-redemption-and-rebirth': '📖 Volume VI： Redemption and Rebirth',
 }
